@@ -16,20 +16,26 @@ org 100h
     op3mmsg1 db 'Withdraw Money$'                      
  
                                                          
-    op4mmsg1 db 'Deposit Money$'
+    op4mmsg1 db 'Deposit Money$'  
+    
+    
+    op5mmsg1 db 'Modify Account$' 
                                                            
     
+    op0mmsg1 db 'End of Simulation$'
   
                                      
     opmsg1 db '1. Create new Account$'
     opmsg2 db '2. Print Account Details$'
     opmsg3 db '3. Withdraw Money $'
-    opmsg4 db '4. Deposit Money $'
+    opmsg4 db '4. Deposit Money $'    
+    opmsg5 db '5. Reset Account $'
+    opmsg6 db '6. Modify Account Details$'
 
     
     opmsg8 db 'Press Enter To Return to Main Menu $'
     
-    imsg db 'What Do You Want To Do ? : $'
+    imsg db 'What operation you want to perform ? : $'
     inputCode db ? 
     
     ;Account details  
@@ -58,9 +64,18 @@ org 100h
     op4msg3 db '3. Rs 5000$'
     op4msg4 db '4. Rs 10000$'
     op4msg5 db 'Enter Code: $'  
-    op4msg6 db 'You Are Withdrawing Too MUCH !$'    
-    op4msg7 db 'Transaction Successful!$'
+    op4msg6 db 'You Are Withdrawing Too MUCH !$'
+    op4msg7 db 'Transaction Successful!$'    
     
+    ;Option 5 <Reset> Messages
+    op5msg1 db 'Account Has been reset successfully$'
+    
+    ;Option 6 <Modify Account> Messages  
+    op6msg0   db 'Account Details Successfully Changed !$'
+    op6msg1_1 db '1. New Account Name ( old: $'
+    op6msg1_2 db ' ) : $' 
+    op6msg2_1 db '2. New Account Pin ( old: $'
+    op6msg2_2 db ' ) : $'
     
     ;PIN Protection
     pinop_msg1 db 'Enter PIN: $' 
@@ -219,7 +234,11 @@ DisplayMenu proc near
     printString opmsg3
     call newLine
     printString opmsg4
-    call newLine    
+    call newLine   
+    printString opmsg5
+    call newLine
+    printString opmsg6
+    call newLine 
     ret        
 DisplayMenu endp       
 
@@ -521,11 +540,13 @@ op4 proc
   dcop1:    
     add totalAmount,1000
     call newLine
+    call newLine
     printString op4msg7
     call newLine
     jmp mainloop
   dcop2:
     add totalAmount,2000
+    call newLine
     call newLine
     printString op4msg7
     call newLine   
@@ -533,11 +554,13 @@ op4 proc
   dcop3:
     add totalAmount,5000
     call newLine
+    call newLine
     printString op4msg7
     call newLine
     jmp mainloop
   dcop4:
     add totalAmount,10000
+    call newLine
     call newLine
     printString op4msg7
     call newLine
@@ -547,6 +570,138 @@ op4 proc
   ret  
 
 op4 endp
+ 
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;                                                                   ;
+;               O P T I O N  5   => RESET ACCOUNT                   ;
+;                                                                   ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+proc etcop5
+   call newLine
+   ;printString opmsg8
+   etcop5in:
+      mov ah,1
+      int 21h
+      cmp al,13
+      je mainloop
+      jmp etcop5in
+   ret 
+etcop5 endp
+
+op5 proc
+  
+  call checkAccountCreated  ;check whether the account has been created or not
+  call getPinInput  ;gets the pin input   
+    
+  ;Do the rest of the work .. display the data
+  call clearScreen
+  
+  mov si,offset accountName
+  mov cx,30
+  l1:
+    mov [si],' '
+    inc si
+  loop l1
+  
+  mov cx,30
+  mov si,offset accountPIN
+  l2:
+    mov [si],' '
+    inc si
+  loop l2  
+  
+  mov totalAmount,0
+  mov accountPINcount,0 ;reset pin count
+      
+  printString op5msg1
+  call etcop5   
+  ret  
+op5 endp
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+;                                                                   ;
+;               O P T I O N  6   => MODIFY ACCOUNT DETAILS          ;
+;                                                                   ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+proc etcop6
+   call newLine
+   ;printString opmsg8
+   etcop6in:
+      mov ah,1
+      int 21h
+      cmp al,13
+      je mainloop
+      jmp etcop6in
+   ret 
+etcop6 endp
+
+macro ISop6 str
+ mov si,offset str
+    ISop6input: 
+        mov ah,1
+        int 21h
+        cmp al,13
+        je labelop6_1
+        mov [si],al
+        inc si
+        jmp ISop6input   
+endm
+
+macro ISop6_2 str
+ mov si,offset str
+ mov accountPINcount,0 ;reset pin count
+    ISop6_2input: 
+        mov ah,1
+        int 21h
+        cmp al,13
+        je labelop6_2
+        inc accountPINcount ;increment pin account again
+        mov [si],al
+        inc si
+        jmp ISop6_2input   
+endm
+
+op6 proc
+  
+  call checkAccountCreated  ;check whether the account has been created or not    
+  call getPinInput  ;gets the pin  
+  call clearScreen
+  
+  printString op5mmsg1
+  call newLine
+  call newLine
+  call newLine
+  
+  ;;account name
+  printString op6msg1_1
+  printString accountName
+  printString op6msg1_2
+  
+  ISop6 accountName ;input accountName
+  
+  labelop6_1:
+    
+    call newLine
+    printString op6msg2_1
+    printString accountPIN
+    printString op6msg2_2
+    ISop6_2 accountPIN
+  
+  labelop6_2:
+    
+    ;Finished MSG
+    call newLine
+    call newLine
+    printString op6msg0
+    call etcop6
+  
+  
+  ret  
+op6 endp
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 ;                                                                   ;
@@ -576,9 +731,15 @@ Main proc
         
         cmp inputCode,'3'
         je op3
-           
+        
+        cmp inputCode,'6'
+        je op6
+        
         cmp inputCode,'1'
         je op1  
+        
+        cmp inputCode,'5'   
+        je op5
         
         jmp mainloop
                        
@@ -587,7 +748,8 @@ Main proc
       call newLine
       call newLine
       
-
+      printString op0mmsg1
+      call newLine
       
       call newLine
        
